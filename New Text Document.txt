@@ -1,0 +1,34 @@
+CREATE         procedure SP_DailyBaseAnalysis
+as 
+begin
+declare @Untagged int,@Tagged int, @MonthWiseSynced int,@ReceivedToday int,@SyncedToGen int,@Error_count int,@Customer_Error_count int
+declare @string varchar(1000) ,@string_customer_error varchar(1000)
+set @string ='<a href="#" onMouseOver="go_details_page(''Policy Error Count'')"  onClick="return false">Policy Error Count</a>'
+set @string_customer_error ='<a href="#" onMouseOver="go_details_page(''Customer Error Count'')"  onClick="return false">Customer Error Count</a>'  
+   select @Untagged=(select count(*) from ilpos_to_iltracker.genisys.iciciadmin.twowheelertransactions where paidbycash = 'Y' and syncstatus ='NotSynced')
+   select @Tagged=(select count(*) from ilpos_to_iltracker.genisys.iciciadmin.twowheelertransactions where paidbycash <> 'Y' and syncstatus ='NotSynced')
+   select @Error_count = (SELECT count(distinct offline_policynumber)from ilpos_to_iltracker.genisys.iciciadmin.twowheelertransactions,ilpos_to_iltracker.genisys.iciciadmin.INTEGRATIONLOG where recordid=offline_policynumber and syncstatus='notsynced')	
+   select @Customer_Error_count = (SELECT count(distinct offline_customercode) from ilpos_to_iltracker.genisys.iciciadmin.twowheelertransactions,ilpos_to_iltracker.genisys.iciciadmin.INTEGRATIONLOG where recordid=offline_customercode and syncstatus='notsynced'and customercode is null)			
+
+update DailyBased_Analysis
+set Status='Total Pending Policies: Tagged + Untagged' ,PolicyCount=@Untagged+@tagged , Product='TW'
+where Update_Condition=1
+
+update DailyBased_Analysis
+set Status='Tagged Policies' ,PolicyCount=@tagged , Product='TW'
+where Update_Condition=2
+
+update DailyBased_Analysis
+set Status='Untagged Policies' ,PolicyCount=@Untagged , Product='TW'
+where Update_Condition=3
+
+update DailyBased_Analysis
+set Status=@string ,PolicyCount=@Error_count , Product='TW'
+where Update_Condition=4
+
+update DailyBased_Analysis
+set Status=@string_customer_error ,PolicyCount=@Customer_Error_count , Product='TW'
+where Update_Condition=5
+
+end 
+
